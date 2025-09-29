@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     console.log('Raw plan value:', userData.plan, 'Type:', typeof userData.plan)
     
     // Define valid values - these MUST match your database constraint exactly
-    const validPlans = ['basic', 'premium', 'pro'] // or whatever your constraint allows
+    const validPlans = ['starter', 'growth', 'enterprise'] // or whatever your constraint allows
     const validPaymentStatuses = ['pending', 'success', 'failed']
 
     // Validate plan - be more explicit about the validation
