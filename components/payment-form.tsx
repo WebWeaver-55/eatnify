@@ -21,15 +21,13 @@ export default function PaymentForm() {
   const supabase = createClientComponentClient()
 
   useEffect(() => {
-    // Get complete signup data
-    const storedData = localStorage.getItem('completeSignupData')
+    const storedData = typeof window !== 'undefined' ? localStorage.getItem('completeSignupData') : null
     if (!storedData) {
       router.push('/signup')
       return
     }
     setSignupData(JSON.parse(storedData))
 
-    // Load Razorpay script
     const script = document.createElement('script')
     script.src = 'https://checkout.razorpay.com/v1/checkout.js'
     script.async = true
@@ -80,7 +78,6 @@ export default function PaymentForm() {
     setError('')
 
     try {
-      // Create Razorpay order
       const orderResponse = await fetch('/api/payment/create-order', {
         method: 'POST',
         headers: {
@@ -97,11 +94,7 @@ export default function PaymentForm() {
       }
 
       const orderData = await orderResponse.json()
-
-      // Generate subdomain
       const subdomain = generateSubdomain(signupData.restaurant_name)
-
-      // Normalize plan name for consistency
       const normalizedPlan = signupData.plan.toLowerCase()
       const planInfo = getPlanInfo(normalizedPlan)
 
@@ -113,7 +106,6 @@ export default function PaymentForm() {
         description: `${planInfo.name} Plan Subscription`,
         order_id: orderData.id,
         handler: async function (response: any) {
-          // Payment successful, verify and store user data
           try {
             const verifyResponse = await fetch('/api/payment/verify', {
               method: 'POST',
@@ -126,7 +118,7 @@ export default function PaymentForm() {
                 razorpay_signature: response.razorpay_signature,
                 userData: {
                   ...signupData,
-                  plan: normalizedPlan, // Store normalized plan name
+                  plan: normalizedPlan,
                   subdomain,
                   payment_status: 'completed'
                 }
@@ -134,11 +126,10 @@ export default function PaymentForm() {
             })
 
             if (verifyResponse.ok) {
-              // Clear localStorage
-              localStorage.removeItem('signupData')
-              localStorage.removeItem('completeSignupData')
-              
-              // Redirect to success page
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('signupData')
+                localStorage.removeItem('completeSignupData')
+              }
               router.push('/payment-success')
             } else {
               throw new Error('Payment verification failed')
@@ -183,10 +174,10 @@ export default function PaymentForm() {
 
   if (!signupData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-slate-900 to-blue-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white text-lg">Loading payment details...</p>
+          <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-base sm:text-lg">Loading payment details...</p>
         </div>
       </div>
     )
@@ -196,108 +187,112 @@ export default function PaymentForm() {
   const PlanIcon = planInfo.icon
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-slate-900 to-blue-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-3 sm:p-4 md:p-6">
+      {/* Subtle background effect */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/10 via-transparent to-transparent"></div>
+      
+      <div className="w-full max-w-lg mx-auto relative z-10">
+        {/* Header - Mobile optimized */}
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="flex justify-center mb-4 sm:mb-5">
             <div className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 via-purple-500 to-blue-600 rounded-2xl blur opacity-75"></div>
-              <div className="relative bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 rounded-2xl px-6 py-3 shadow-2xl">
-                <span className="text-white font-bold text-2xl tracking-wider">EATNIFY</span>
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl sm:rounded-2xl blur opacity-60"></div>
+              <div className="relative bg-gradient-to-r from-blue-600 to-blue-500 rounded-xl sm:rounded-2xl px-5 sm:px-6 py-2.5 sm:py-3 shadow-xl">
+                <span className="text-white font-bold text-xl sm:text-2xl tracking-wide">EATNIFY</span>
               </div>
             </div>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Complete Your Payment</h1>
-          <p className="text-white/70">Secure checkout powered by Razorpay</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2">Complete Your Payment</h1>
+          <p className="text-sm sm:text-base text-white/70">Secure checkout powered by Razorpay</p>
         </div>
 
-        <Card className="bg-white/95 backdrop-blur-sm shadow-2xl border-0 mb-6">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-3 text-gray-900">
-              <div className={`p-2 rounded-xl bg-gradient-to-r ${planInfo.color}`}>
-                <PlanIcon className="h-6 w-6 text-white" />
+        {/* Main Card - Enhanced mobile UI */}
+        <Card className="bg-white/95 backdrop-blur-sm shadow-2xl border-0 rounded-2xl sm:rounded-3xl overflow-hidden">
+          <CardHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-5 sm:pt-6">
+            <CardTitle className="flex items-center gap-2 sm:gap-3 text-gray-900">
+              <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gradient-to-r ${planInfo.color} flex-shrink-0`}>
+                <PlanIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-              <div>
-                <h2 className="text-xl font-bold">{planInfo.name} Plan</h2>
-                <p className="text-sm text-gray-600 font-normal">Perfect for your business needs</p>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg sm:text-xl font-bold truncate">{planInfo.name} Plan</h2>
+                <p className="text-xs sm:text-sm text-gray-600 font-normal">Perfect for your business needs</p>
               </div>
             </CardTitle>
           </CardHeader>
 
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 pb-5 sm:pb-6">
             {/* Error Message */}
             {error && (
-              <div className="p-4 rounded-xl flex items-center gap-3 bg-red-50 border border-red-200 text-red-700">
-                <AlertCircle className="h-5 w-5 flex-shrink-0" />
-                <span className="text-sm font-medium">{error}</span>
+              <div className="p-3 sm:p-4 rounded-xl flex items-start gap-2 sm:gap-3 bg-red-50 border border-red-200 text-red-700">
+                <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 mt-0.5" />
+                <span className="text-xs sm:text-sm font-medium">{error}</span>
               </div>
             )}
 
-            {/* Order Summary */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6">
-              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-blue-500" />
+            {/* Order Summary - Compact mobile view */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+              <h3 className="font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
+                <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
                 Order Summary
               </h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Restaurant Name</span>
-                  <span className="font-semibold text-gray-900">{signupData.restaurant_name}</span>
+              <div className="space-y-2 sm:space-y-3">
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-xs sm:text-sm text-gray-700">Restaurant</span>
+                  <span className="font-semibold text-xs sm:text-sm text-gray-900 truncate max-w-[60%] text-right">{signupData.restaurant_name}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Plan</span>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${planInfo.color}`}>
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-xs sm:text-sm text-gray-700">Plan</span>
+                  <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium text-white bg-gradient-to-r ${planInfo.color}`}>
                     {planInfo.name}
                   </span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Email</span>
-                  <span className="font-medium text-gray-900">{signupData.email}</span>
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-xs sm:text-sm text-gray-700">Email</span>
+                  <span className="font-medium text-xs sm:text-sm text-gray-900 truncate max-w-[60%] text-right">{signupData.email}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Phone</span>
-                  <span className="font-medium text-gray-900">{signupData.phone_number}</span>
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-xs sm:text-sm text-gray-700">Phone</span>
+                  <span className="font-medium text-xs sm:text-sm text-gray-900">{signupData.phone_number}</span>
                 </div>
                 
-                <hr className="my-4 border-gray-200" />
+                <hr className="my-3 sm:my-4 border-gray-200" />
                 
-                <div className="flex justify-between items-center text-lg">
-                  <span className="font-semibold text-gray-900">Total Amount</span>
-                  <span className="font-bold text-2xl text-blue-600">₹{signupData.price / 100}</span>
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-sm sm:text-base text-gray-900">Total Amount</span>
+                  <span className="font-bold text-xl sm:text-2xl text-blue-600">₹{signupData.price / 100}</span>
                 </div>
               </div>
             </div>
 
-            {/* Plan Features */}
-            <div className="bg-gray-50 rounded-xl p-4">
-              <h4 className="font-medium text-gray-900 mb-3">What's included:</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {/* Plan Features - Mobile grid */}
+            <div className="bg-gray-50 rounded-xl sm:rounded-2xl p-3 sm:p-4">
+              <h4 className="font-medium text-gray-900 mb-2 sm:mb-3 text-sm sm:text-base">What's included:</h4>
+              <div className="grid grid-cols-1 gap-2">
                 {planInfo.features.map((feature, index) => (
                   <div key={index} className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-                    <span className="text-sm text-gray-700">{feature}</span>
+                    <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
+                    <span className="text-xs sm:text-sm text-gray-700">{feature}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Payment Button */}
-            <div className="space-y-4 pt-2">
+            {/* Payment Buttons - Mobile optimized */}
+            <div className="space-y-3 sm:space-y-4 pt-1 sm:pt-2">
               <Button
                 onClick={handlePayment}
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-4 text-base sm:text-lg transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-xl rounded-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none h-14"
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 active:from-blue-700 active:to-blue-600 text-white font-semibold py-3 sm:py-4 text-sm sm:text-base md:text-lg transition-all duration-200 shadow-lg hover:shadow-xl rounded-xl disabled:opacity-50 disabled:cursor-not-allowed h-12 sm:h-14 touch-manipulation"
               >
                 {loading ? (
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Processing Payment...
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-sm sm:text-base">Processing...</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    Pay ₹{signupData.price / 100} Securely
+                    <CreditCard className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="text-sm sm:text-base">Pay ₹{signupData.price / 100} Securely</span>
                   </div>
                 )}
               </Button>
@@ -305,24 +300,20 @@ export default function PaymentForm() {
               <Button
                 onClick={handleGoBack}
                 variant="outline"
-                className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 py-3 rounded-xl h-12"
+                className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 active:bg-gray-100 py-3 rounded-xl h-11 sm:h-12 text-sm sm:text-base touch-manipulation"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
+                <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" />
                 Go Back to Home
               </Button>
             </div>
 
-            {/* Security Info */}
-            <div className="flex items-center justify-center gap-2 text-gray-500 text-sm pt-2">
-              <Shield className="h-4 w-4" />
-              <span>256-bit SSL encrypted • PCI DSS compliant</span>
+            {/* Security Info - Responsive */}
+            <div className="flex items-center justify-center gap-2 text-gray-500 text-xs sm:text-sm pt-1 sm:pt-2">
+              <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span className="text-center">256-bit SSL encrypted • PCI DSS compliant</span>
             </div>
           </CardContent>
         </Card>
-
-        {/* Additional floating elements for visual appeal */}
-        <div className="absolute top-10 left-10 w-24 h-24 bg-blue-600/10 rounded-full blur-2xl"></div>
-        <div className="absolute bottom-10 right-10 w-36 h-36 bg-purple-600/10 rounded-full blur-2xl"></div>
       </div>
     </div>
   )

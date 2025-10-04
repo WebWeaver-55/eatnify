@@ -16,7 +16,7 @@ const geistMono = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "Eatnify - AI-Powered Digital Menus for Restaurants",
+  title: "Eatnify",
   description: "Engage customers, boost sales, and grow your restaurant effortlessly with AI-powered digital menus.",
   generator: "v0.app",
 }

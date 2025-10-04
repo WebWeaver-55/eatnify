@@ -17,24 +17,24 @@ const OwnerWelcomePage = () => {
   useEffect(() => {
     const fetchOwnerData = async () => {
       try {
-        // Get user email from localStorage
-        const userEmail = localStorage.getItem('userEmail');
+        const userEmail = typeof window !== 'undefined' ? localStorage.getItem('userEmail') : null;
         
-        console.log('Fetching owner data for:', userEmail);
+        console.log('Welcome page - Fetching data for:', userEmail);
         
         if (!userEmail) {
-          console.log('No user email found, redirecting to login');
+          console.log('No email found, redirecting to login');
           router.push('/login');
           return;
         }
 
         const { data: userData, error } = await supabase
           .from('users')
-          .select('restaurant_name, plan, email')
+          .select('restaurant_name, plan, email, first_login')
           .eq('email', userEmail)
           .single();
 
-        console.log('User data fetched:', { userData, error });
+        console.log('Welcome page - User data:', userData);
+        console.log('Welcome page - first_login value:', userData?.first_login);
 
         if (error || !userData) {
           console.error('Error fetching user data:', error);
@@ -42,10 +42,16 @@ const OwnerWelcomePage = () => {
           return;
         }
 
+        // If first_login is false, redirect to dashboard immediately
+        if (userData.first_login === false) {
+          console.log('User already completed welcome, redirecting to dashboard');
+          const plan = userData.plan || 'starter';
+          router.push(`/owner/dashboard/${plan}`);
+          return;
+        }
+
         setRestaurantName(userData.restaurant_name || '');
         setUserPlan(userData.plan || 'starter');
-        
-        console.log('User plan set to:', userData.plan || 'starter');
         
       } catch (error) {
         console.error('Error in fetchOwnerData:', error);
@@ -60,27 +66,24 @@ const OwnerWelcomePage = () => {
 
   const slides = [
     {
-      icon: <ChefHat className="w-20 h-20" />,
+      icon: <ChefHat className="w-16 h-16 sm:w-20 sm:h-20" />,
       color: "from-blue-500 to-blue-600",
-      bgColor: "bg-blue-50",
       title: "Welcome to Eatnify",
-      description: "Your all-in-one restaurant management platform. Let's get you started on transforming your restaurant experience.",
+      description: "Your all-in-one restaurant management platform. Transform your restaurant experience with powerful tools.",
       features: ["Menu Management", "Order Tracking", "Analytics Dashboard"]
     },
     {
-      icon: <Sparkles className="w-20 h-20" />,
-      color: "from-purple-500 to-purple-600",
-      bgColor: "bg-purple-50",
-      title: "Manage Your Menu Easily",
-      description: "Create, update, and organize your menu in seconds. Add photos, descriptions, and pricing with just a few clicks.",
-      features: ["Drag & Drop Interface", "Real-time Updates", "Photo Gallery"]
+      icon: <Sparkles className="w-16 h-16 sm:w-20 sm:h-20" />,
+      color: "from-blue-500 to-blue-600",
+      title: "Manage Your Menu",
+      description: "Create, update, and organize your menu effortlessly. Add photos, descriptions, and pricing in seconds.",
+      features: ["Drag & Drop", "Real-time Updates", "Photo Gallery"]
     },
     {
-      icon: <TrendingUp className="w-20 h-20" />,
-      color: "from-green-500 to-green-600",
-      bgColor: "bg-green-50",
+      icon: <TrendingUp className="w-16 h-16 sm:w-20 sm:h-20" />,
+      color: "from-blue-500 to-blue-600",
       title: "AI-Powered Insights",
-      description: "Get intelligent menu suggestions, optimize pricing, and gain insights to grow your restaurant business.",
+      description: "Get intelligent suggestions, optimize pricing, and gain insights to grow your restaurant business.",
       features: ["Smart Analytics", "Price Optimization", "Customer Insights"]
     }
   ];
@@ -105,12 +108,13 @@ const OwnerWelcomePage = () => {
 
     setSubmitting(true);
     try {
-      const userEmail = localStorage.getItem('userEmail');
+      const userEmail = typeof window !== 'undefined' ? localStorage.getItem('userEmail') : null;
       
-      console.log('Updating restaurant name for:', userEmail);
+      console.log('=== UPDATING USER DATA ===');
+      console.log('Email:', userEmail);
       console.log('Restaurant name:', restaurantName.trim());
+      console.log('Setting first_login to: false');
       
-      // Update restaurant name and first_login status in users table
       const { data, error } = await supabase
         .from('users')
         .update({
@@ -120,17 +124,26 @@ const OwnerWelcomePage = () => {
         .eq('email', userEmail)
         .select();
 
-      console.log('Update result:', { data, error });
+      console.log('Update response:', { data, error });
 
       if (error) {
         console.error('Update error:', error);
+        alert(`Failed to update: ${error.message}`);
         throw error;
       }
 
-      console.log('Current user plan:', userPlan);
-      console.log('Redirecting to:', `/owner/dashboard/${userPlan}`);
+      if (!data || data.length === 0) {
+        console.error('No rows updated');
+        alert('Failed to update user data. Please try again.');
+        return;
+      }
+
+      console.log('Successfully updated. New first_login value:', data[0].first_login);
+      console.log('Redirecting to dashboard:', userPlan);
       
-      // Redirect to plan-specific dashboard
+      // Small delay to ensure database update is complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       router.push(`/owner/dashboard/${userPlan}`);
       
     } catch (error) {
@@ -143,13 +156,13 @@ const OwnerWelcomePage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
         <div className="text-center">
-          <div className="relative w-20 h-20 mx-auto mb-4">
-            <div className="absolute inset-0 border-4 border-white/20 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-t-blue-400 border-r-purple-400 border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+          <div className="relative w-16 h-16 mx-auto mb-4">
+            <div className="absolute inset-0 border-4 border-white/10 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-t-blue-500 border-r-blue-500 border-b-transparent border-l-transparent rounded-full animate-spin"></div>
           </div>
-          <p className="text-white text-lg">Loading your workspace...</p>
+          <p className="text-white/80 text-base">Loading your workspace...</p>
         </div>
       </div>
     );
@@ -158,79 +171,66 @@ const OwnerWelcomePage = () => {
   const currentSlideData = slides[currentSlide];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background blobs */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-0 -left-4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-        <div className="absolute top-0 -right-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-3 sm:p-4 md:p-6 relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-transparent to-transparent"></div>
 
       <div className="relative z-10 w-full max-w-4xl">
-        <div className="bg-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-          {/* Header with logo */}
-          <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 p-6 text-center">
-            <div className="inline-block">
-              <h1 className="text-4xl font-bold text-white tracking-wider">EATNIFY</h1>
-              <p className="text-blue-100 text-sm mt-1">Restaurant Management Suite</p>
-            </div>
+        <div className="bg-white/5 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-500 p-4 sm:p-6 text-center">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white tracking-wide">EATNIFY</h1>
+            <p className="text-blue-50 text-xs sm:text-sm mt-1">Restaurant Management Suite</p>
           </div>
 
-          {/* Progress indicator */}
-          <div className="flex justify-center gap-3 pt-8 pb-6 px-4">
+          <div className="flex justify-center gap-2 sm:gap-3 pt-6 sm:pt-8 pb-4 sm:pb-6 px-4">
             {slides.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentSlide(index)}
-                className={`h-2.5 rounded-full transition-all duration-300 ${
+                aria-label={`Go to slide ${index + 1}`}
+                className={`h-2 sm:h-2.5 rounded-full transition-all duration-300 touch-manipulation ${
                   index === currentSlide 
-                    ? 'w-12 bg-gradient-to-r from-blue-400 to-purple-400 shadow-lg' 
-                    : 'w-2.5 bg-white/30 hover:bg-white/50'
+                    ? 'w-8 sm:w-12 bg-blue-500 shadow-lg shadow-blue-500/50' 
+                    : 'w-2 sm:w-2.5 bg-white/20 hover:bg-white/40 active:bg-white/40'
                 }`}
               />
             ))}
           </div>
 
-          {/* Main content */}
-          <div className="px-8 sm:px-12 lg:px-16 py-8">
-            <div className="min-h-[400px] flex flex-col items-center">
-              {/* Icon with gradient background */}
-              <div className={`relative mb-8 group cursor-pointer`}>
-                <div className={`absolute -inset-4 bg-gradient-to-r ${currentSlideData.color} rounded-3xl blur-2xl opacity-50 group-hover:opacity-75 transition-opacity`}></div>
-                <div className={`relative bg-gradient-to-r ${currentSlideData.color} p-6 rounded-2xl shadow-2xl text-white transform group-hover:scale-110 transition-transform duration-300`}>
+          <div className="px-4 sm:px-8 md:px-12 lg:px-16 py-6 sm:py-8">
+            <div className="min-h-[350px] sm:min-h-[400px] flex flex-col items-center">
+              <div className="relative mb-6 sm:mb-8">
+                <div className={`absolute -inset-3 sm:-inset-4 bg-gradient-to-r ${currentSlideData.color} rounded-2xl sm:rounded-3xl blur-xl opacity-30`}></div>
+                <div className={`relative bg-gradient-to-r ${currentSlideData.color} p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-xl text-white`}>
                   {currentSlideData.icon}
                 </div>
               </div>
 
-              {/* Title and description */}
-              <h2 className="text-4xl font-bold text-white mb-4 text-center">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 sm:mb-4 text-center px-2">
                 {currentSlideData.title}
               </h2>
-              <p className="text-blue-100 text-lg leading-relaxed text-center max-w-2xl mb-8">
+              <p className="text-white/70 text-sm sm:text-base md:text-lg leading-relaxed text-center max-w-2xl mb-6 sm:mb-8 px-2">
                 {currentSlideData.description}
               </p>
 
-              {/* Features list */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 w-full max-w-2xl mb-6 sm:mb-8">
                 {currentSlideData.features.map((feature, idx) => (
                   <div 
                     key={idx}
-                    className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-300 group"
+                    className="bg-white/5 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 border border-white/10 hover:bg-white/10 active:bg-white/10 transition-all duration-200"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`bg-gradient-to-r ${currentSlideData.color} p-2 rounded-lg group-hover:scale-110 transition-transform`}>
-                        <Check className="w-4 h-4 text-white" />
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className={`bg-gradient-to-r ${currentSlideData.color} p-1.5 sm:p-2 rounded-md sm:rounded-lg flex-shrink-0`}>
+                        <Check className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                       </div>
-                      <span className="text-white font-medium text-sm">{feature}</span>
+                      <span className="text-white font-medium text-xs sm:text-sm">{feature}</span>
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Restaurant name input (last slide) */}
               {currentSlide === slides.length - 1 && (
                 <div className="w-full max-w-md animate-fadeIn">
-                  <label className="block text-white font-semibold mb-3 text-lg">
+                  <label className="block text-white font-semibold mb-2 sm:mb-3 text-base sm:text-lg">
                     🏪 What's your restaurant name?
                   </label>
                   <input
@@ -238,80 +238,64 @@ const OwnerWelcomePage = () => {
                     value={restaurantName}
                     onChange={(e) => setRestaurantName(e.target.value)}
                     placeholder="e.g., The Golden Spoon"
-                    className="w-full px-6 py-4 bg-white/20 backdrop-blur-sm border-2 border-white/30 rounded-2xl focus:ring-4 focus:ring-purple-400/50 focus:border-purple-400 transition-all text-white placeholder-white/50 text-lg font-medium"
+                    className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-white placeholder-white/40 text-base sm:text-lg font-medium outline-none"
                   />
-                  <p className="text-white/60 text-sm mt-2">Your plan: <span className="font-semibold text-white">{userPlan}</span></p>
+                  <p className="text-white/50 text-xs sm:text-sm mt-2">Your plan: <span className="font-semibold text-white/80">{userPlan}</span></p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Navigation buttons */}
-          <div className="px-8 sm:px-12 lg:px-16 pb-8 flex justify-between items-center gap-4">
-            {currentSlide > 0 ? (
-              <button
-                onClick={handlePrev}
-                className="px-6 py-3 text-white/80 hover:text-white font-medium transition-all hover:bg-white/10 rounded-xl"
-              >
-                ← Back
-              </button>
-            ) : (
-              <div></div>
-            )}
-            
-            <div className="ml-auto">
-              {currentSlide < slides.length - 1 ? (
+          <div className="px-4 sm:px-8 md:px-12 lg:px-16 pb-6 sm:pb-8">
+            <div className="flex justify-between items-center gap-3 sm:gap-4">
+              {currentSlide > 0 ? (
                 <button
-                  onClick={handleNext}
-                  className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-2xl hover:from-blue-600 hover:to-purple-600 transition-all flex items-center gap-3 font-semibold shadow-xl hover:shadow-2xl hover:scale-105 transform"
+                  onClick={handlePrev}
+                  className="px-4 sm:px-6 py-2.5 sm:py-3 text-white/70 hover:text-white active:text-white font-medium transition-all hover:bg-white/10 active:bg-white/10 rounded-lg sm:rounded-xl touch-manipulation min-h-[44px]"
                 >
-                  Next
-                  <ArrowRight className="w-5 h-5" />
+                  ← Back
                 </button>
               ) : (
-                <button
-                  onClick={handleGetStarted}
-                  disabled={submitting || !restaurantName.trim()}
-                  className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-2xl hover:from-green-600 hover:to-emerald-600 transition-all flex items-center gap-3 font-semibold shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 hover:scale-105 transform"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Setting up...
-                    </>
-                  ) : (
-                    <>
-                      Go to Dashboard
-                      <ArrowRight className="w-5 h-5" />
-                    </>
-                  )}
-                </button>
+                <div></div>
               )}
+              
+              <div className="ml-auto">
+                {currentSlide < slides.length - 1 ? (
+                  <button
+                    onClick={handleNext}
+                    className="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl sm:rounded-2xl hover:from-blue-700 hover:to-blue-600 active:from-blue-700 active:to-blue-600 transition-all flex items-center gap-2 sm:gap-3 font-semibold shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 touch-manipulation min-h-[44px] text-sm sm:text-base"
+                  >
+                    Next
+                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleGetStarted}
+                    disabled={submitting || !restaurantName.trim()}
+                    className="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl sm:rounded-2xl hover:from-blue-700 hover:to-blue-600 active:from-blue-700 active:to-blue-600 transition-all flex items-center gap-2 sm:gap-3 font-semibold shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none hover:shadow-xl hover:shadow-blue-500/40 touch-manipulation min-h-[44px] text-sm sm:text-base"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                        <span className="hidden sm:inline">Setting up...</span>
+                        <span className="sm:hidden">Wait...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="hidden sm:inline">Go to Dashboard</span>
+                        <span className="sm:hidden">Get Started</span>
+                        <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Decorative elements */}
-        <div className="absolute -top-6 -left-6 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-6 -right-6 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl"></div>
       </div>
 
       <style jsx>{`
-        @keyframes blob {
-          0%, 100% {
-            transform: translate(0, 0) scale(1);
-          }
-          25% {
-            transform: translate(20px, -20px) scale(1.1);
-          }
-          50% {
-            transform: translate(-20px, 20px) scale(0.9);
-          }
-          75% {
-            transform: translate(20px, 20px) scale(1.05);
-          }
-        }
-        
         @keyframes fadeIn {
           from {
             opacity: 0;
@@ -323,20 +307,14 @@ const OwnerWelcomePage = () => {
           }
         }
         
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-        
         .animate-fadeIn {
           animation: fadeIn 0.5s ease-out;
+        }
+
+        @media (max-width: 640px) {
+          button {
+            -webkit-tap-highlight-color: transparent;
+          }
         }
       `}</style>
     </div>

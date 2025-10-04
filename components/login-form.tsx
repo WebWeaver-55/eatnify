@@ -22,7 +22,7 @@ export function LoginForm() {
   const router = useRouter()
   const supabase = createClientComponentClient()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setMessage({ text: "", type: "" })
@@ -65,7 +65,7 @@ export function LoginForm() {
       // Redirect after a short delay to show success message
       setTimeout(() => {
         console.log('Redirecting to /owner') // Debug log
-        router.push("/owner")
+        router.push("/owner/")
       }, 1500)
 
     } catch (error) {
@@ -77,6 +77,7 @@ export function LoginForm() {
       setIsLoading(false)
     }
   }
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
