@@ -34,7 +34,7 @@ export default function DashboardHeader() {
   // Generate QR code with email
   const generateQRCode = async (email: string) => {
     const baseUrl = getBaseUrl()
-    const menuUrl = `${baseUrl}/menu/${encodeURIComponent(email)}`
+    const menuUrl = `${baseUrl}/menu/${(email)}`
     
     // Generate QR code as data URL
     const qrCodeDataUrl = await QRCode.toDataURL(menuUrl, {
@@ -54,7 +54,7 @@ export default function DashboardHeader() {
     if (canvasRef.current) {
       try {
         const baseUrl = getBaseUrl()
-        const menuUrl = `${baseUrl}/menu/${encodeURIComponent(email)}`
+        const menuUrl = `${baseUrl}/menu/${(email)}`
         await QRCode.toCanvas(canvasRef.current, menuUrl, {
           width: 512,
           margin: 3,
