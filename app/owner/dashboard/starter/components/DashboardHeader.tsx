@@ -28,7 +28,7 @@ export default function DashboardHeader() {
 
   // Get base URL for Netlify
   const getBaseUrl = () => {
-    return 'https://eatnify.netlify.app/owner/dashboard/starter'
+    return 'https://eatnify.netlify.app'
   }
 
   // Generate QR code with email
@@ -355,7 +355,7 @@ export default function DashboardHeader() {
                 <div className="flex gap-2">
                   <input 
                     type="text" 
-                         value={`https://eatnify.netlify.app/owner/dashboard/starter/menu/${userEmail}`}
+                         value={`https://eatnify.netlify.app/menu/${userEmail}`}
                     readOnly
                     className="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-slate-300 text-sm"
                   />
