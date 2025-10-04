@@ -28,7 +28,7 @@ export default function DashboardHeader() {
 
   // Get base URL for Netlify
   const getBaseUrl = () => {
-    return 'https://eatnify.netlify.app'
+    return 'https://eatnify.netlify.app/owner/dashboard/starter'
   }
 
   // Generate QR code with email
