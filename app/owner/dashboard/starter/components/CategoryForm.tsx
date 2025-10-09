@@ -21,19 +21,27 @@ export default function CategoryForm() {
   })
   const [loading, setLoading] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
 
-  // Get user email from localStorage
-  const getUserEmail = () => {
-    return localStorage.getItem('userEmail')
-  }
+  // Set mounted state and get user email after component mounts
+  useEffect(() => {
+    setMounted(true)
+    const email = localStorage.getItem('userEmail')
+    setUserEmail(email)
+  }, [])
+
+  // Fetch categories when userEmail is available
+  useEffect(() => {
+    if (userEmail) {
+      fetchCategories()
+    }
+  }, [userEmail])
 
   // Fetch categories for this email
   const fetchCategories = async () => {
-    const userEmail = getUserEmail()
     if (!userEmail) {
-      console.error('No email found in localStorage')
-      alert('Please login first')
-      window.location.href = '/login'
+      console.error('No email found')
       return
     }
 
@@ -58,6 +66,8 @@ export default function CategoryForm() {
       if (data && data.length > 0) {
         const maxOrder = Math.max(...data.map(c => c.display_order))
         setFormData(prev => ({ ...prev, display_order: maxOrder + 1 }))
+      } else {
+        setFormData(prev => ({ ...prev, display_order: 0 }))
       }
     } catch (error) {
       console.error('Error fetching categories:', error)
@@ -65,14 +75,9 @@ export default function CategoryForm() {
     }
   }
 
-  useEffect(() => {
-    fetchCategories()
-  }, [])
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    const userEmail = getUserEmail()
     if (!userEmail) {
       console.error('No user email found')
       alert('Please login first')
@@ -187,8 +192,24 @@ export default function CategoryForm() {
     }
   }
 
-  const userEmail = getUserEmail()
+  const handleLogout = () => {
+    localStorage.removeItem('userEmail')
+    window.location.href = '/login'
+  }
 
+  // Show loading state until component is mounted
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-xl">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show login prompt if no user email
   if (!userEmail) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -229,10 +250,7 @@ export default function CategoryForm() {
                 🔄 Refresh
               </button>
               <button
-                onClick={() => {
-                  localStorage.removeItem('userEmail')
-                  window.location.href = '/login'
-                }}
+                onClick={handleLogout}
                 className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
               >
                 🚪 Logout
