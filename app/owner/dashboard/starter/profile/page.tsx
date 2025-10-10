@@ -1,7 +1,7 @@
 'use client'
 import { createClient } from '@supabase/supabase-js'
 import { useState, useEffect } from 'react'
-import { Edit3, Save, X, Check, MapPin, Phone, Clock, Star, Globe, Sparkles, Users, Award, TrendingUp, DollarSign, Instagram, Facebook, Twitter, Mail, Wifi, Car, TreePine, Calendar, ChevronRight, Utensils, Camera, Upload } from 'lucide-react'
+import { Edit3, Save, X, Check, MapPin, Phone, Clock, Star, Globe, Sparkles, Users, Award, TrendingUp, DollarSign, Instagram, Facebook, Twitter, Mail, Wifi, Car, TreePine, Calendar, ChevronRight, Utensils } from 'lucide-react'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -43,56 +43,110 @@ export default function FuturisticProfile() {
     reservations_required: false
   })
 
-const fetchProfile = async () => {
-  console.log('🔄 fetchProfile started...')
-  setLoading(true)
-  try {
-    // Check localStorage instead of Supabase Auth
-    const userEmail = localStorage.getItem('userEmail')
-    const isLoggedIn = localStorage.getItem('userLoggedIn')
-    
-    console.log('📧 User email from localStorage:', userEmail)
-    console.log('🔐 Logged in status:', isLoggedIn)
+  const fetchProfile = async () => {
+    console.log('🔄 fetchProfile started...')
+    setLoading(true)
+    try {
+      // Get email from localStorage
+      const userEmail = localStorage.getItem('userEmail')
+      console.log('📧 User email from localStorage:', userEmail)
 
-    if (!userEmail || isLoggedIn !== 'true') {
-      console.log('⚠️ No user found in localStorage')
-      setProfile(null)
-      setStatus('empty')
-      return
-    }
+      if (!userEmail) {
+        console.log('⚠️ No user email found in localStorage')
+        setProfile(null)
+        setStatus('empty')
+        return
+      }
 
-    // Fetch profile using the email from localStorage
-    console.log(`🔍 Fetching profile for email: ${userEmail}`)
-    const { data, error } = await supabase
-      .from('restaurant_profiles')
-      .select('*')
-      .eq('email', userEmail)
-      .maybeSingle()
+      // Set email in form data for new profiles
+      setFormData(prev => ({ ...prev, email: userEmail }))
 
-    console.log('📊 Database response:', { data, error })
-    
-    if (error) {
-      console.error('❌ Database error:', error)
-      throw error
+      // FIRST: Try to fetch from restaurant_profiles table
+      console.log(`🔍 Fetching from restaurant_profiles for email: ${userEmail}`)
+      const { data: profileData, error: profileError } = await supabase
+        .from('restaurant_profiles')
+        .select('*')
+        .eq('email', userEmail)
+        .maybeSingle()
+
+      console.log('📊 restaurant_profiles response:', { profileData, profileError })
+
+      if (profileError) {
+        console.error('❌ restaurant_profiles error:', profileError)
+      }
+
+      if (profileData) {
+        console.log('✅ Profile found in restaurant_profiles:', profileData.restaurant_name)
+        setProfile(profileData)
+        setFormData(profileData)
+        setStatus('loaded')
+        setLoading(false)
+        return
+      }
+
+      // SECOND: If not found in restaurant_profiles, try users table
+      console.log(`🔍 Fetching from users table for email: ${userEmail}`)
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('restaurant_name, email')
+        .eq('email', userEmail)
+        .maybeSingle()
+
+      console.log('📊 users table response:', { userData, userError })
+
+      if (userError) {
+        console.error('❌ users table error:', userError)
+      }
+
+      if (userData && userData.restaurant_name) {
+        console.log('✅ Restaurant name found in users table:', userData.restaurant_name)
+        // Create a basic profile from users table data
+        const basicProfile = {
+          restaurant_name: userData.restaurant_name,
+          email: userData.email,
+          // Set default values for other required fields
+          cuisine_type: '',
+          phone: '',
+          website_url: '',
+          address: '',
+          description: '',
+          opening_time: '09:00',
+          closing_time: '22:00',
+          days_open: 'Monday - Sunday',
+          price_range: '$$',
+          rating: '4.5',
+          total_reviews: '0',
+          seating_capacity: '',
+          average_meal_time: '45 mins',
+          ambiance: 'Casual Dining',
+          instagram_url: '',
+          facebook_url: '',
+          twitter_url: '',
+          specialty_dish: '',
+          delivery_available: true,
+          takeaway_available: true,
+          parking_available: false,
+          wifi_available: false,
+          outdoor_seating: false,
+          reservations_required: false
+        }
+        setProfile(basicProfile)
+        setFormData(basicProfile)
+        setStatus('loaded')
+      } else {
+        console.log('❌ No profile found in any table')
+        setProfile(null)
+        setStatus('empty')
+      }
+
+    } catch (error) {
+      console.error('💥 Unexpected error:', error)
+      setStatus('error')
+    } finally {
+      setLoading(false)
     }
-    
-    if (data) {
-      console.log('✅ Profile found:', data.restaurant_name)
-      setProfile(data)
-     
-      setStatus('loaded')
-    } else {
-      console.log('❌ No profile found')
-      setProfile(null)
-      setStatus('empty')
-    }
-  } catch (error) {
-    console.error('💥 Error:', error)
-    setStatus('error')
-  } finally {
-    setLoading(false)
   }
-}
+
   const saveProfile = async () => {
     if (!formData.restaurant_name.trim()) {
       alert('Restaurant name is required!')
@@ -101,10 +155,19 @@ const fetchProfile = async () => {
     
     setSaving(true)
     try {
+      const userEmail = localStorage.getItem('userEmail')
+      
+      // Ensure email is always set from localStorage
+      const profileData = {
+        ...formData,
+        email: userEmail
+      }
+
       if (profile?.id) {
+        // Update existing profile
         const { data, error } = await supabase
           .from('restaurant_profiles')
-          .update(formData)
+          .update(profileData)
           .eq('id', profile.id)
           .select()
           .single()
@@ -112,9 +175,10 @@ const fetchProfile = async () => {
         if (error) throw error
         setProfile(data)
       } else {
+        // Create new profile
         const { data, error } = await supabase
           .from('restaurant_profiles')
-          .insert([formData])
+          .insert([profileData])
           .select()
           .single()
 
@@ -166,12 +230,11 @@ const fetchProfile = async () => {
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600 rounded-full mix-blend-soft-light filter blur-3xl opacity-10 animate-pulse"></div>
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500 rounded-full mix-blend-soft-light filter blur-3xl opacity-10 animate-pulse" style={{animationDelay: '1s'}}></div>
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-indigo-600 rounded-full mix-blend-soft-light filter blur-3xl opacity-10 animate-pulse" style={{animationDelay: '2s'}}></div>
       </div>
 
       {/* Success Toast */}
       {status === 'saved' && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-4 w-full max-w-md animate-bounce">
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-4 w-full max-w-md">
           <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-blue-400">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
               <Check className="w-5 h-5" />
@@ -181,18 +244,18 @@ const fetchProfile = async () => {
         </div>
       )}
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 py-6 md:py-10">
-        {/* Header */}
-        <div className="text-center mb-8 md:mb-12">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 py-6">
+        {/* Header - Responsive */}
+        <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-4">
             <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
               <Utensils className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </div>
-            <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl md:text-6xl font-black bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 bg-clip-text text-transparent">
               EatNify
             </h1>
           </div>
-          <p className="text-blue-300 text-base md:text-xl font-medium">Your Premium Digital Restaurant Profile</p>
+          <p className="text-blue-300 text-sm md:text-xl font-medium">Your Premium Digital Restaurant Profile</p>
         </div>
 
         {profile ? (
@@ -215,7 +278,7 @@ const fetchProfile = async () => {
                   </button>
 
                   <div className="absolute bottom-6 left-6 right-6">
-                    <h2 className="text-3xl md:text-5xl font-black text-white mb-3 drop-shadow-lg">
+                    <h2 className="text-2xl md:text-5xl font-black text-white mb-3 drop-shadow-lg">
                       {profile.restaurant_name || 'Restaurant Name'}
                     </h2>
                     <div className="flex items-center gap-3 flex-wrap">
@@ -260,7 +323,7 @@ const fetchProfile = async () => {
                     </div>
                   </div>
 
-                  {/* Opening Hours - Enhanced */}
+                  {/* Opening Hours */}
                   <div className="bg-gradient-to-br from-slate-800/50 to-slate-700/30 rounded-2xl p-6 mb-6 border border-blue-500/20">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
@@ -517,57 +580,6 @@ const fetchProfile = async () => {
                   </div>
                 </div>
               </div>
-
-              {/* Quick Actions */}
-              <div className="bg-gradient-to-br from-slate-900/90 to-slate-800/90 backdrop-blur-xl border border-blue-500/30 rounded-3xl p-6 shadow-2xl">
-                <h3 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-blue-400" />
-                  Quick Actions
-                </h3>
-                <div className="space-y-3">
-                  <button className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-3.5 rounded-xl transition-all font-bold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105 transform">
-                    View Public Page
-                  </button>
-                  <button className="w-full bg-blue-500/20 hover:bg-blue-500/30 border-2 border-blue-500/40 hover:border-blue-500/60 text-blue-300 hover:text-white py-3.5 rounded-xl transition-all font-bold">
-                    Share Profile
-                  </button>
-                  <button className="w-full bg-blue-500/20 hover:bg-blue-500/30 border-2 border-blue-500/40 hover:border-blue-500/60 text-blue-300 hover:text-white py-3.5 rounded-xl transition-all font-bold">
-                    Download QR Code
-                  </button>
-                </div>
-              </div>
-
-              {/* Stats Card */}
-              <div className="bg-gradient-to-br from-slate-900/90 to-slate-800/90 backdrop-blur-xl border border-blue-500/30 rounded-3xl p-6 shadow-2xl">
-                <h3 className="text-white font-bold text-lg mb-4">This Month</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                        <Users className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <div>
-                        <div className="text-white font-bold text-lg">2.4K</div>
-                        <div className="text-blue-300 text-xs">Profile Views</div>
-                      </div>
-                    </div>
-                    <div className="text-green-400 text-sm font-bold">+12%</div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                        <Phone className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <div>
-                        <div className="text-white font-bold text-lg">186</div>
-                        <div className="text-blue-300 text-xs">Calls Received</div>
-                      </div>
-                    </div>
-                    <div className="text-green-400 text-sm font-bold">+8%</div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         ) : (
@@ -596,7 +608,7 @@ const fetchProfile = async () => {
         {/* EDIT MODAL */}
         {isEditing && (
           <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-50 flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-blue-500/30 rounded-3xl shadow-2xl max-w-3xl w-full my-8">
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-blue-500/30 rounded-3xl shadow-2xl max-w-3xl w-full my-8 max-h-[90vh] overflow-hidden">
               <div className="sticky top-0 bg-gradient-to-r from-slate-900 to-slate-800 border-b border-blue-500/30 p-6 rounded-t-3xl z-10">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -616,7 +628,7 @@ const fetchProfile = async () => {
                 </div>
               </div>
 
-              <div className="p-6 md:p-8 max-h-[70vh] overflow-y-auto">
+              <div className="p-6 md:p-8 overflow-y-auto max-h-[calc(90vh-140px)]">
                 <div className="space-y-6">
                   {/* Basic Info Section */}
                   <div className="bg-slate-800/50 border border-blue-500/20 rounded-2xl p-6">
@@ -794,91 +806,6 @@ const fetchProfile = async () => {
                           />
                         </div>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Details */}
-                  <div className="bg-slate-800/50 border border-blue-500/20 rounded-2xl p-6">
-                    <h3 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
-                      <Award className="w-5 h-5 text-blue-400" />
-                      Restaurant Details
-                    </h3>
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-bold text-blue-300 mb-2">Price Range</label>
-                        <select
-                          value={formData.price_range}
-                          onChange={(e) => setFormData(prev => ({ ...prev, price_range: e.target.value }))}
-                          className="w-full bg-slate-900 border border-blue-500/30 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                        >
-                          <option value="$">$ - Budget</option>
-                          <option value="$">$ - Moderate</option>
-                          <option value="$$">$$ - Upscale</option>
-                          <option value="$$">$$ - Fine Dining</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-blue-300 mb-2">Rating (1-5)</label>
-                        <input
-                          type="text"
-                          value={formData.rating}
-                          onChange={(e) => setFormData(prev => ({ ...prev, rating: e.target.value }))}
-                          className="w-full bg-slate-900 border border-blue-500/30 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                          placeholder="4.5"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-blue-300 mb-2">Total Reviews</label>
-                        <input
-                          type="text"
-                          value={formData.total_reviews}
-                          onChange={(e) => setFormData(prev => ({ ...prev, total_reviews: e.target.value }))}
-                          className="w-full bg-slate-900 border border-blue-500/30 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                          placeholder="150"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-blue-300 mb-2">Seating Capacity</label>
-                        <input
-                          type="text"
-                          value={formData.seating_capacity}
-                          onChange={(e) => setFormData(prev => ({ ...prev, seating_capacity: e.target.value }))}
-                          className="w-full bg-slate-900 border border-blue-500/30 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                          placeholder="50"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Services & Amenities */}
-                  <div className="bg-slate-800/50 border border-blue-500/20 rounded-2xl p-6">
-                    <h3 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-blue-400" />
-                      Services & Amenities
-                    </h3>
-                    <div className="grid md:grid-cols-2 gap-3">
-                      {[
-                        { key: 'delivery_available', label: 'Delivery Available', icon: '🚚' },
-                        { key: 'takeaway_available', label: 'Takeaway Available', icon: '🥡' },
-                        { key: 'parking_available', label: 'Parking Available', icon: '🚗' },
-                        { key: 'wifi_available', label: 'Free WiFi', icon: '📶' },
-                        { key: 'outdoor_seating', label: 'Outdoor Seating', icon: '🌳' },
-                        { key: 'reservations_required', label: 'Reservations Required', icon: '📅' }
-                      ].map((service) => (
-                        <label key={service.key} className="flex items-center gap-3 p-4 bg-slate-900/50 rounded-xl border border-blue-500/20 cursor-pointer hover:border-blue-500/40 hover:bg-slate-900/70 transition-all group">
-                          <input
-                            type="checkbox"
-                            checked={formData[service.key]}
-                            onChange={(e) => setFormData(prev => ({ ...prev, [service.key]: e.target.checked }))}
-                            className="w-5 h-5 rounded border-2 border-blue-500/50 text-blue-500 focus:ring-blue-500 focus:ring-offset-0 focus:ring-2"
-                          />
-                          <span className="text-2xl">{service.icon}</span>
-                          <span className="text-white font-semibold group-hover:text-blue-300 transition-colors">{service.label}</span>
-                        </label>
-                      ))}
                     </div>
                   </div>
 
