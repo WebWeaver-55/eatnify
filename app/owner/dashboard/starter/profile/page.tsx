@@ -1,11 +1,18 @@
 'use client'
 import { createClient } from '@supabase/supabase-js'
 import { useState, useEffect } from 'react'
-import { Edit3, Save, X, Check, MapPin, Phone, Clock, Star, Globe, Sparkles, Users, Award, TrendingUp, DollarSign, Instagram, Facebook, Twitter, Mail, Wifi, Car, TreePine, Calendar, ChevronRight, Utensils } from 'lucide-react'
+import { Edit3, Save, X, Check, MapPin, Phone, Clock, Star, Globe, Sparkles, Users, Award, TrendingUp, DollarSign, Instagram, Facebook, Mail, Wifi, Car, TreePine, Calendar, ChevronRight, Utensils } from 'lucide-react'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// WhatsApp Icon Component
+const WhatsAppIcon = ({ className = "w-6 h-6" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893c0-3.176-1.24-6.165-3.495-8.411"/>
+  </svg>
+)
 
 export default function FuturisticProfile() {
   const [profile, setProfile] = useState(null)
@@ -33,7 +40,7 @@ export default function FuturisticProfile() {
     ambiance: 'Casual Dining',
     instagram_url: '',
     facebook_url: '',
-    twitter_url: '',
+    whatsapp_number: '',
     specialty_dish: '',
     delivery_available: true,
     takeaway_available: true,
@@ -42,6 +49,56 @@ export default function FuturisticProfile() {
     outdoor_seating: false,
     reservations_required: false
   })
+
+  // Helper function to format URLs
+  const formatUrl = (url, type = 'social') => {
+    if (!url) return ''
+    
+    // Remove any whitespace
+    url = url.trim()
+    
+    switch(type) {
+      case 'instagram':
+        if (!url.startsWith('http')) {
+          return `https://instagram.com/${url.replace('@', '')}`
+        }
+        break
+      case 'facebook':
+        if (!url.startsWith('http')) {
+          return `https://facebook.com/${url}`
+        }
+        break
+      case 'website':
+        if (!url.startsWith('http')) {
+          return `https://${url}`
+        }
+        break
+      case 'whatsapp':
+        // Clean WhatsApp number - remove any non-digit characters except +
+        const cleanNumber = url.replace(/[^\d+]/g, '')
+        return `https://wa.me/${cleanNumber}`
+    }
+    
+    return url
+  }
+
+  // Helper function to format WhatsApp number for display
+  const formatWhatsAppNumber = (number) => {
+    if (!number) return ''
+    // Remove any non-digit characters except +
+    const cleanNumber = number.replace(/[^\d+]/g, '')
+    
+    // Format for display: +1 234 567 8900
+    if (cleanNumber.startsWith('+')) {
+      const countryCode = cleanNumber.slice(0, 2)
+      const rest = cleanNumber.slice(2)
+      if (rest.length <= 10) {
+        return `${countryCode} ${rest}`
+      }
+    }
+    
+    return cleanNumber
+  }
 
   const fetchProfile = async () => {
     console.log('🔄 fetchProfile started...')
@@ -115,7 +172,7 @@ export default function FuturisticProfile() {
           ambiance: 'Casual Dining',
           instagram_url: '',
           facebook_url: '',
-          twitter_url: '',
+          whatsapp_number: '',
           specialty_dish: '',
           delivery_available: true,
           takeaway_available: true,
@@ -153,7 +210,11 @@ export default function FuturisticProfile() {
       
       const profileData = {
         ...formData,
-        email: userEmail
+        email: userEmail,
+        // Format URLs before saving
+        website_url: formatUrl(formData.website_url, 'website'),
+        instagram_url: formatUrl(formData.instagram_url, 'instagram'),
+        facebook_url: formatUrl(formData.facebook_url, 'facebook')
       }
 
       if (profile?.id) {
@@ -376,7 +437,7 @@ export default function FuturisticProfile() {
                     )}
 
                     {profile.website_url && (
-                      <a href={profile.website_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 lg:p-4 bg-slate-800/50 rounded-xl border border-blue-500/20 hover:border-blue-500/40 hover:bg-slate-800/70 transition-all group lg:col-span-2">
+                      <a href={formatUrl(profile.website_url, 'website')} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 lg:p-4 bg-slate-800/50 rounded-xl border border-blue-500/20 hover:border-blue-500/40 hover:bg-slate-800/70 transition-all group lg:col-span-2">
                         <div className="w-10 h-10 lg:w-12 lg:h-12 bg-blue-500/20 rounded-lg lg:rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                           <Globe className="w-4 h-4 lg:w-6 lg:h-6 text-blue-400" />
                         </div>
@@ -462,7 +523,7 @@ export default function FuturisticProfile() {
               </div>
 
               {/* Social Media Card */}
-              {(profile.instagram_url || profile.facebook_url || profile.twitter_url) && (
+              {(profile.instagram_url || profile.facebook_url || profile.whatsapp_number) && (
                 <div className="bg-gradient-to-br from-slate-900/90 to-slate-800/90 backdrop-blur-xl border border-blue-500/30 rounded-2xl lg:rounded-3xl p-4 lg:p-8 shadow-2xl">
                   <h3 className="text-white font-bold text-lg lg:text-xl mb-4 lg:mb-6 flex items-center gap-2">
                     <Globe className="w-5 h-5 lg:w-6 lg:h-6 text-blue-400" />
@@ -470,7 +531,7 @@ export default function FuturisticProfile() {
                   </h3>
                   <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:gap-4">
                     {profile.instagram_url && (
-                      <a href={profile.instagram_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 lg:flex-col lg:flex-1 lg:min-w-[150px] bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 rounded-xl lg:rounded-2xl p-4 hover:scale-105 transition-transform group">
+                      <a href={formatUrl(profile.instagram_url, 'instagram')} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 lg:flex-col lg:flex-1 lg:min-w-[150px] bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 rounded-xl lg:rounded-2xl p-4 hover:scale-105 transition-transform group">
                         <Instagram className="w-6 h-6 lg:w-8 lg:h-8 text-pink-400 mb-0 lg:mb-2" />
                         <div className="flex-1 lg:text-center">
                           <div className="text-white font-bold text-sm lg:text-base">Instagram</div>
@@ -479,7 +540,7 @@ export default function FuturisticProfile() {
                       </a>
                     )}
                     {profile.facebook_url && (
-                      <a href={profile.facebook_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 lg:flex-col lg:flex-1 lg:min-w-[150px] bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 rounded-xl lg:rounded-2xl p-4 hover:scale-105 transition-transform group">
+                      <a href={formatUrl(profile.facebook_url, 'facebook')} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 lg:flex-col lg:flex-1 lg:min-w-[150px] bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 rounded-xl lg:rounded-2xl p-4 hover:scale-105 transition-transform group">
                         <Facebook className="w-6 h-6 lg:w-8 lg:h-8 text-blue-400 mb-0 lg:mb-2" />
                         <div className="flex-1 lg:text-center">
                           <div className="text-white font-bold text-sm lg:text-base">Facebook</div>
@@ -487,12 +548,12 @@ export default function FuturisticProfile() {
                         </div>
                       </a>
                     )}
-                    {profile.twitter_url && (
-                      <a href={profile.twitter_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 lg:flex-col lg:flex-1 lg:min-w-[150px] bg-gradient-to-br from-sky-500/20 to-cyan-500/20 border border-sky-500/30 rounded-xl lg:rounded-2xl p-4 hover:scale-105 transition-transform group">
-                        <Twitter className="w-6 h-6 lg:w-8 lg:h-8 text-sky-400 mb-0 lg:mb-2" />
+                    {profile.whatsapp_number && (
+                      <a href={formatUrl(profile.whatsapp_number, 'whatsapp')} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 lg:flex-col lg:flex-1 lg:min-w-[150px] bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-xl lg:rounded-2xl p-4 hover:scale-105 transition-transform group">
+                        <WhatsAppIcon className="w-6 h-6 lg:w-8 lg:h-8 text-green-400 mb-0 lg:mb-2" />
                         <div className="flex-1 lg:text-center">
-                          <div className="text-white font-bold text-sm lg:text-base">Twitter</div>
-                          <div className="text-sky-300 text-xs lg:text-sm">Follow updates</div>
+                          <div className="text-white font-bold text-sm lg:text-base">WhatsApp</div>
+                          <div className="text-green-300 text-xs lg:text-sm">Message us</div>
                         </div>
                       </a>
                     )}
@@ -531,7 +592,7 @@ export default function FuturisticProfile() {
                         if (profile.address) score += 15
                         if (profile.description) score += 15
                         if (profile.specialty_dish) score += 10
-                        if (profile.instagram_url || profile.facebook_url || profile.twitter_url) score += 10
+                        if (profile.instagram_url || profile.facebook_url || profile.whatsapp_number) score += 10
                         return score + '%'
                       })()}
                     </div>
@@ -549,7 +610,7 @@ export default function FuturisticProfile() {
                             if (profile.address) score += 15
                             if (profile.description) score += 15
                             if (profile.specialty_dish) score += 10
-                            if (profile.instagram_url || profile.facebook_url || profile.twitter_url) score += 10
+                            if (profile.instagram_url || profile.facebook_url || profile.whatsapp_number) score += 10
                             return score
                           })()}%`
                         }}
@@ -733,7 +794,7 @@ export default function FuturisticProfile() {
                           value={formData.website_url}
                           onChange={(e) => setFormData(prev => ({ ...prev, website_url: e.target.value }))}
                           className="w-full bg-slate-900 border border-blue-500/30 rounded-lg lg:rounded-xl px-3 lg:px-4 py-2 lg:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm lg:text-base"
-                          placeholder="https://yourrestaurant.com"
+                          placeholder="https://yourrestaurant.com or yourrestaurant.com"
                         />
                       </div>
 
@@ -807,7 +868,7 @@ export default function FuturisticProfile() {
                   <div className="bg-slate-800/50 border border-blue-500/20 rounded-xl lg:rounded-2xl p-4 lg:p-6">
                     <h3 className="text-white font-bold text-base lg:text-lg mb-3 lg:mb-4 flex items-center gap-2">
                       <Globe className="w-4 h-4 lg:w-5 lg:h-5 text-blue-400" />
-                      Social Media
+                      Social Media & WhatsApp
                     </h3>
                     <div className="space-y-3 lg:space-y-4">
                       <div className="flex items-center gap-2 lg:gap-3">
@@ -815,11 +876,11 @@ export default function FuturisticProfile() {
                           <Instagram className="w-4 h-4 lg:w-6 lg:h-6 text-pink-400" />
                         </div>
                         <input
-                          type="url"
+                          type="text"
                           value={formData.instagram_url}
                           onChange={(e) => setFormData(prev => ({ ...prev, instagram_url: e.target.value }))}
                           className="flex-1 bg-slate-900 border border-blue-500/30 rounded-lg lg:rounded-xl px-3 lg:px-4 py-2 lg:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm lg:text-base"
-                          placeholder="Instagram Profile URL"
+                          placeholder="Instagram username or URL (e.g., myrestaurant or https://instagram.com/myrestaurant)"
                         />
                       </div>
 
@@ -828,24 +889,24 @@ export default function FuturisticProfile() {
                           <Facebook className="w-4 h-4 lg:w-6 lg:h-6 text-blue-400" />
                         </div>
                         <input
-                          type="url"
+                          type="text"
                           value={formData.facebook_url}
                           onChange={(e) => setFormData(prev => ({ ...prev, facebook_url: e.target.value }))}
                           className="flex-1 bg-slate-900 border border-blue-500/30 rounded-lg lg:rounded-xl px-3 lg:px-4 py-2 lg:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm lg:text-base"
-                          placeholder="Facebook Page URL"
+                          placeholder="Facebook username or URL (e.g., myrestaurant or https://facebook.com/myrestaurant)"
                         />
                       </div>
 
                       <div className="flex items-center gap-2 lg:gap-3">
-                        <div className="w-10 h-10 lg:w-12 lg:h-12 bg-sky-500/20 rounded-lg lg:rounded-xl flex items-center justify-center flex-shrink-0">
-                          <Twitter className="w-4 h-4 lg:w-6 lg:h-6 text-sky-400" />
+                        <div className="w-10 h-10 lg:w-12 lg:h-12 bg-green-500/20 rounded-lg lg:rounded-xl flex items-center justify-center flex-shrink-0">
+                          <WhatsAppIcon className="w-4 h-4 lg:w-6 lg:h-6 text-green-400" />
                         </div>
                         <input
-                          type="url"
-                          value={formData.twitter_url}
-                          onChange={(e) => setFormData(prev => ({ ...prev, twitter_url: e.target.value }))}
+                          type="text"
+                          value={formData.whatsapp_number}
+                          onChange={(e) => setFormData(prev => ({ ...prev, whatsapp_number: e.target.value }))}
                           className="flex-1 bg-slate-900 border border-blue-500/30 rounded-lg lg:rounded-xl px-3 lg:px-4 py-2 lg:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm lg:text-base"
-                          placeholder="Twitter Profile URL"
+                          placeholder="WhatsApp number with country code (e.g., +12345678900)"
                         />
                       </div>
                     </div>
