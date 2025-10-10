@@ -660,11 +660,11 @@ export default function FuturisticProfile() {
           </div>
         )}
 
-        {/* EDIT MODAL */}
+             {/* EDIT MODAL */}
         {isEditing && (
           <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-50 flex items-center justify-center p-2 lg:p-4 overflow-y-auto safe-area-inset-top safe-area-inset-bottom">
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-blue-500/30 rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-3xl my-2 lg:my-8 max-h-[95vh] lg:max-h-[90vh] overflow-hidden">
-              <div className="sticky top-0 bg-gradient-to-r from-slate-900 to-slate-800 border-b border-blue-500/30 p-4 lg:p-6 rounded-t-2xl lg:rounded-t-3xl z-10">
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-blue-500/30 rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-3xl my-2 lg:my-8 max-h-[95dvh] lg:max-h-[90dvh] overflow-hidden flex flex-col">
+              <div className="sticky top-0 bg-gradient-to-r from-slate-900 to-slate-800 border-b border-blue-500/30 p-4 lg:p-6 rounded-t-2xl lg:rounded-t-3xl z-10 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 lg:gap-3">
                     <div className="w-8 h-8 lg:w-10 lg:h-10 bg-blue-500/20 rounded-lg lg:rounded-xl flex items-center justify-center">
@@ -683,7 +683,8 @@ export default function FuturisticProfile() {
                 </div>
               </div>
 
-              <div className="p-4 lg:p-8 overflow-y-auto max-h-[calc(95vh-120px)] lg:max-h-[calc(90vh-140px)]">
+              {/* Scrollable Content Area */}
+              <div className="flex-1 overflow-y-auto p-4 lg:p-8">
                 <div className="space-y-4 lg:space-y-6">
                   {/* Basic Info Section */}
                   <div className="bg-slate-800/50 border border-blue-500/20 rounded-xl lg:rounded-2xl p-4 lg:p-6">
@@ -880,7 +881,7 @@ export default function FuturisticProfile() {
                           value={formData.instagram_url}
                           onChange={(e) => setFormData(prev => ({ ...prev, instagram_url: e.target.value }))}
                           className="flex-1 bg-slate-900 border border-blue-500/30 rounded-lg lg:rounded-xl px-3 lg:px-4 py-2 lg:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm lg:text-base"
-                          placeholder="Instagram username or URL (e.g., myrestaurant or https://instagram.com/myrestaurant)"
+                          placeholder="Instagram username or URL"
                         />
                       </div>
 
@@ -893,7 +894,7 @@ export default function FuturisticProfile() {
                           value={formData.facebook_url}
                           onChange={(e) => setFormData(prev => ({ ...prev, facebook_url: e.target.value }))}
                           className="flex-1 bg-slate-900 border border-blue-500/30 rounded-lg lg:rounded-xl px-3 lg:px-4 py-2 lg:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm lg:text-base"
-                          placeholder="Facebook username or URL (e.g., myrestaurant or https://facebook.com/myrestaurant)"
+                          placeholder="Facebook username or URL"
                         />
                       </div>
 
@@ -906,7 +907,7 @@ export default function FuturisticProfile() {
                           value={formData.whatsapp_number}
                           onChange={(e) => setFormData(prev => ({ ...prev, whatsapp_number: e.target.value }))}
                           className="flex-1 bg-slate-900 border border-blue-500/30 rounded-lg lg:rounded-xl px-3 lg:px-4 py-2 lg:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm lg:text-base"
-                          placeholder="WhatsApp number with country code (e.g., +12345678900)"
+                          placeholder="WhatsApp number with country code"
                         />
                       </div>
                     </div>
@@ -914,8 +915,8 @@ export default function FuturisticProfile() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="sticky bottom-0 bg-gradient-to-t from-slate-900 to-slate-800 border-t border-blue-500/30 p-4 lg:p-6 rounded-b-2xl lg:rounded-b-3xl">
+              {/* Action Buttons - Fixed at bottom */}
+              <div className="sticky bottom-0 bg-gradient-to-t from-slate-900 to-slate-800 border-t border-blue-500/30 p-4 lg:p-6 rounded-b-2xl lg:rounded-b-3xl flex-shrink-0">
                 <div className="flex flex-col gap-3 lg:flex-row lg:gap-4">
                   <button
                     onClick={saveProfile}
