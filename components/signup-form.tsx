@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { AlertCircle, CheckCircle2, X } from 'lucide-react'
 
 export default function SignupForm() {
   const [formData, setFormData] = useState({
@@ -16,6 +17,7 @@ export default function SignupForm() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [focusedField, setFocusedField] = useState('')
+  const [message, setMessage] = useState({ text: '', type: '' })
 
   const router = useRouter()
   const supabase = createClientComponentClient()
@@ -26,33 +28,73 @@ export default function SignupForm() {
       [e.target.name]: e.target.value
     })
     if (error) setError('')
+    if (message.text) setMessage({ text: '', type: '' })
   }
 
-  const validateForm = () => {
+  const checkDuplicate = async (field: string, value: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select(field)
+        .eq(field, value)
+        .single()
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
+        console.error('Error checking duplicate:', error)
+        return false
+      }
+
+      return !!data // Returns true if data exists (duplicate found)
+    } catch (error) {
+      console.error('Error checking duplicate:', error)
+      return false
+    }
+  }
+
+  const validateForm = async () => {
     if (!formData.name.trim()) {
-      setError('Name is required')
+      setMessage({ text: 'Name is required', type: 'error' })
       return false
     }
     if (!formData.email.trim()) {
-      setError('Email is required')
+      setMessage({ text: 'Email is required', type: 'error' })
       return false
     }
     if (!formData.phone_number.trim()) {
-      setError('Phone number is required')
+      setMessage({ text: 'Phone number is required', type: 'error' })
       return false
     }
     if (!formData.restaurant_name.trim()) {
-      setError('Restaurant name is required')
+      setMessage({ text: 'Restaurant name is required', type: 'error' })
       return false
     }
     if (!formData.password || formData.password.length < 6) {
-      setError('Password must be at least 6 characters long')
+      setMessage({ text: 'Password must be at least 6 characters long', type: 'error' })
       return false
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address')
+      setMessage({ text: 'Please enter a valid email address', type: 'error' })
+      return false
+    }
+
+    // Check for duplicates
+    const emailExists = await checkDuplicate('email', formData.email.trim().toLowerCase())
+    if (emailExists) {
+      setMessage({ text: 'An account with this email already exists', type: 'error' })
+      return false
+    }
+
+    const phoneExists = await checkDuplicate('phone_number', formData.phone_number.trim())
+    if (phoneExists) {
+      setMessage({ text: 'An account with this phone number already exists', type: 'error' })
+      return false
+    }
+
+    const restaurantExists = await checkDuplicate('restaurant_name', formData.restaurant_name.trim())
+    if (restaurantExists) {
+      setMessage({ text: 'An account with this restaurant name already exists', type: 'error' })
       return false
     }
     
@@ -63,10 +105,12 @@ export default function SignupForm() {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setMessage({ text: '', type: '' })
     setSuccess(false)
 
     try {
-      if (!validateForm()) {
+      const isValid = await validateForm()
+      if (!isValid) {
         setLoading(false)
         return
       }
@@ -96,6 +140,11 @@ export default function SignupForm() {
       if (typeof window !== 'undefined') {
         localStorage.setItem('signupData', JSON.stringify(signupData))
       }
+      
+      setMessage({ 
+        text: 'Account created successfully! Redirecting to plan selection...', 
+        type: 'success' 
+      })
       setSuccess(true)
 
       setTimeout(() => {
@@ -104,298 +153,242 @@ export default function SignupForm() {
 
     } catch (err: any) {
       console.error('Signup form error:', err)
-      setError(err.message || 'Something went wrong')
+      setMessage({ 
+        text: err.message || 'Something went wrong. Please try again.', 
+        type: 'error' 
+      })
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ paddingTop: '80px' }}>
-      {/* Enhanced Dark Blue Background with Texture */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
-        <div className="absolute inset-0 opacity-40">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-blue-900/30 via-slate-800/20 to-blue-800/30 animate-pulse"></div>
-        </div>
-        
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-600/20 to-slate-700/15 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-slate-700/20 to-blue-700/15 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
-        </div>
-
-        <div className="absolute inset-0 opacity-15">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle at 2px 2px, rgba(59, 130, 246, 0.4) 1px, transparent 0)`,
-            backgroundSize: '50px 50px'
-          }}></div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 left-4 sm:left-10 w-20 h-20 sm:w-24 sm:h-24 bg-blue-600/10 rounded-full blur-2xl animate-pulse"></div>
+        <div className="absolute bottom-10 right-4 sm:right-10 w-28 h-28 sm:w-36 sm:h-36 bg-purple-600/10 rounded-full blur-2xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 right-8 sm:right-20 w-16 h-16 sm:w-20 sm:h-20 bg-cyan-500/10 rounded-full blur-xl animate-pulse delay-500"></div>
+        <div className="absolute bottom-1/3 left-8 sm:left-16 w-12 h-12 sm:w-16 sm:h-16 bg-blue-500/10 rounded-full blur-lg animate-pulse delay-1500"></div>
       </div>
 
-      {/* Main Content */}
-      <div className="relative z-10 min-h-[calc(100vh-80px)] flex items-center justify-center p-3 sm:p-4 py-8 sm:py-12">
-        <div className="w-full max-w-lg mx-auto">
-          {/* Floating Header */}
-          <div className="text-center mb-8 sm:mb-10 relative">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-r from-blue-600/20 to-slate-600/20 rounded-full blur-2xl"></div>
-            </div>
-            
-            <div className="relative">
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-black bg-gradient-to-r from-white via-blue-100 to-slate-200 bg-clip-text text-transparent mb-3 sm:mb-4 tracking-tight">
-                Eatnify
-              </h1>
-              <div className="flex items-center justify-center space-x-2 mb-4 sm:mb-6">
-                <div className="w-8 sm:w-12 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent"></div>
-                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                <div className="w-8 sm:w-12 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent"></div>
+      <div className="w-full max-w-md mx-auto relative z-10">
+        <div className="bg-slate-800/40 backdrop-blur-xl border border-blue-400/20 shadow-2xl rounded-3xl overflow-hidden">
+          {/* Gradient Top Bar */}
+          <div className="h-2 bg-gradient-to-r from-blue-500 to-cyan-500"></div>
+          
+          <div className="space-y-1 pb-6 pt-8 px-6 sm:px-8">
+            <div className="flex justify-center mb-4">
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl blur opacity-75 animate-pulse"></div>
+                <div className="relative bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl px-5 py-3 sm:px-6 sm:py-3 shadow-2xl border border-blue-400/30">
+                  <span className="text-white font-bold text-xl sm:text-2xl tracking-wider">EATNIFY</span>
+                </div>
               </div>
-              <p className="text-base sm:text-xl text-blue-100/90 font-light tracking-wide px-4">
-                The Future of Restaurant Digital Presence
+            </div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-center text-white">
+              Create Your Account
+            </h1>
+            <p className="text-center text-blue-200 text-sm sm:text-base">
+              Join the next generation of restaurants
+            </p>
+          </div>
+          
+          <div className="space-y-6 px-6 sm:px-8 pb-8">
+            {/* Enhanced Error/Success Message */}
+            {message.text && (
+              <div className={`p-4 rounded-2xl flex items-start gap-3 border-2 backdrop-blur-sm transition-all duration-300 ${
+                message.type === 'error' 
+                  ? 'bg-red-500/10 border-red-500/30 text-red-300 shadow-lg shadow-red-500/10' 
+                  : 'bg-green-500/10 border-green-500/30 text-green-300 shadow-lg shadow-green-500/10'
+              }`}>
+                <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                  message.type === 'error' ? 'bg-red-500/20' : 'bg-green-500/20'
+                }`}>
+                  {message.type === 'error' ? (
+                    <AlertCircle className="h-4 w-4 text-red-400" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 text-green-400" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className={`text-sm font-semibold ${
+                    message.type === 'error' ? 'text-red-300' : 'text-green-300'
+                  }`}>
+                    {message.type === 'error' ? 'Registration Failed' : 'Success!'}
+                  </p>
+                  <p className="text-sm mt-1">{message.text}</p>
+                </div>
+                <button
+                  onClick={() => setMessage({ text: "", type: "" })}
+                  className="flex-shrink-0 text-blue-300 hover:text-white transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Full Name */}
+              <div className="space-y-3">
+                <label className="text-blue-300 font-medium text-sm sm:text-base">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  onFocus={() => setFocusedField('name')}
+                  onBlur={() => setFocusedField('')}
+                  required
+                  disabled={loading}
+                  className="w-full h-12 bg-slate-700/50 border-blue-400/20 text-white placeholder-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-400 rounded-xl text-sm sm:text-base transition-all backdrop-blur-sm px-4"
+                  placeholder="Enter your full name"
+                />
+              </div>
+
+              {/* Email */}
+              <div className="space-y-3">
+                <label className="text-blue-300 font-medium text-sm sm:text-base">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  onFocus={() => setFocusedField('email')}
+                  onBlur={() => setFocusedField('')}
+                  required
+                  disabled={loading}
+                  className="w-full h-12 bg-slate-700/50 border-blue-400/20 text-white placeholder-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-400 rounded-xl text-sm sm:text-base transition-all backdrop-blur-sm px-4"
+                  placeholder="Enter your email address"
+                />
+              </div>
+
+              {/* Phone Number */}
+              <div className="space-y-3">
+                <label className="text-blue-300 font-medium text-sm sm:text-base">
+                  Phone Number *
+                </label>
+                <input
+                  type="tel"
+                  name="phone_number"
+                  value={formData.phone_number}
+                  onChange={handleChange}
+                  onFocus={() => setFocusedField('phone')}
+                  onBlur={() => setFocusedField('')}
+                  required
+                  disabled={loading}
+                  className="w-full h-12 bg-slate-700/50 border-blue-400/20 text-white placeholder-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-400 rounded-xl text-sm sm:text-base transition-all backdrop-blur-sm px-4"
+                  placeholder="Enter your phone number"
+                />
+              </div>
+
+              {/* Restaurant Name */}
+              <div className="space-y-3">
+                <label className="text-blue-300 font-medium text-sm sm:text-base">
+                  Restaurant Name *
+                </label>
+                <input
+                  type="text"
+                  name="restaurant_name"
+                  value={formData.restaurant_name}
+                  onChange={handleChange}
+                  onFocus={() => setFocusedField('restaurant')}
+                  onBlur={() => setFocusedField('')}
+                  required
+                  disabled={loading}
+                  className="w-full h-12 bg-slate-700/50 border-blue-400/20 text-white placeholder-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-400 rounded-xl text-sm sm:text-base transition-all backdrop-blur-sm px-4"
+                  placeholder="Enter your restaurant name"
+                />
+                {formData.restaurant_name && (
+                  <div className="mt-3 relative overflow-hidden rounded-xl">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-slate-500/10"></div>
+                    <div className="relative bg-slate-700/50 backdrop-blur-sm border border-blue-400/20 rounded-xl p-3">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <span className="text-white text-xs">🌐</span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-blue-300 text-xs font-medium">Your Digital Address</p>
+                          <p className="text-white font-mono text-xs truncate">
+                            {formData.restaurant_name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-')}.eatnify.com
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Password */}
+              <div className="space-y-3">
+                <label className="text-blue-300 font-medium text-sm sm:text-base">
+                  Password *
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  onFocus={() => setFocusedField('password')}
+                  onBlur={() => setFocusedField('')}
+                  required
+                  minLength={6}
+                  disabled={loading}
+                  className="w-full h-12 bg-slate-700/50 border-blue-400/20 text-white placeholder-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-400 rounded-xl text-sm sm:text-base transition-all backdrop-blur-sm px-4"
+                  placeholder="Create a secure password"
+                />
+                <p className="text-blue-300/60 text-xs">
+                  Minimum 6 characters required
+                </p>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading || success}
+                className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold h-12 text-sm sm:text-base transition-all duration-200 transform hover:scale-[1.02] shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/40 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none border border-blue-400/30"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Creating Account...
+                  </div>
+                ) : success ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Success! Redirecting...
+                  </div>
+                ) : (
+                  "Continue to Plan Selection"
+                )}
+              </button>
+            </form>
+
+            <div className="text-center pt-4 border-t border-blue-400/20">
+              <p className="text-sm text-blue-300">
+                Already have an account?{" "}
+                <a 
+                  href="/login" 
+                  className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors hover:underline"
+                >
+                  Sign In
+                </a>
               </p>
             </div>
           </div>
+        </div>
 
-          {/* Glassmorphism Form Container */}
-          <div className="relative group">
-            <div className="absolute -inset-0.5 sm:-inset-1 bg-gradient-to-r from-blue-600/30 to-slate-600/30 rounded-2xl sm:rounded-3xl blur-lg group-hover:blur-xl transition-all duration-300 opacity-60"></div>
-            
-            <div className="relative bg-white/8 backdrop-blur-2xl border border-white/15 rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-8 md:p-10">
-              {/* Form Header */}
-              <div className="text-center mb-6 sm:mb-8">
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent mb-2 sm:mb-3">
-                  Create Your Account
-                </h2>
-                <p className="text-sm sm:text-base text-blue-200/80 font-light">Join the next generation of restaurants</p>
-              </div>
-              
-              {/* Success Message */}
-              {success && (
-                <div className="mb-6 sm:mb-8 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-green-500/20 animate-pulse rounded-xl sm:rounded-2xl"></div>
-                  <div className="relative bg-gradient-to-r from-emerald-50/90 to-green-50/90 backdrop-blur-sm border border-emerald-200/50 text-emerald-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center">
-                    <div className="flex items-center justify-center mb-2 sm:mb-3">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full flex items-center justify-center animate-bounce">
-                        <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                      </div>
-                    </div>
-                    <h3 className="font-bold text-base sm:text-lg mb-1 sm:mb-2">Account Created Successfully!</h3>
-                    <p className="text-xs sm:text-sm opacity-80">Preparing your personalized experience...</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Error Message */}
-              {error && (
-                <div className="mb-6 sm:mb-8 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-pink-500/20 animate-pulse rounded-xl sm:rounded-2xl"></div>
-                  <div className="relative bg-gradient-to-r from-red-50/90 to-pink-50/90 backdrop-blur-sm border border-red-200/50 text-red-800 rounded-xl sm:rounded-2xl p-4 sm:p-6">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0">
-                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                      </div>
-                      <span className="font-semibold text-sm sm:text-base">{error}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-                {/* Full Name */}
-                <div className="relative group">
-                  <label className="block text-xs sm:text-sm font-semibold text-blue-100 mb-2 sm:mb-2.5 tracking-wide">
-                    Full Name *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      onFocus={() => setFocusedField('name')}
-                      onBlur={() => setFocusedField('')}
-                      required
-                      className="w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl sm:rounded-2xl focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 transition-all duration-300 text-white placeholder-blue-200/50 text-sm sm:text-base font-medium"
-                      placeholder="Enter your full name"
-                    />
-                    {focusedField === 'name' && (
-                      <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-500/10 to-slate-500/10 -z-10 blur-sm"></div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Email */}
-                <div className="relative group">
-                  <label className="block text-xs sm:text-sm font-semibold text-blue-100 mb-2 sm:mb-2.5 tracking-wide">
-                    Email Address *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      onFocus={() => setFocusedField('email')}
-                      onBlur={() => setFocusedField('')}
-                      required
-                      className="w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl sm:rounded-2xl focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 transition-all duration-300 text-white placeholder-blue-200/50 text-sm sm:text-base font-medium"
-                      placeholder="Enter your email address"
-                    />
-                    {focusedField === 'email' && (
-                      <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-500/10 to-slate-500/10 -z-10 blur-sm"></div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Phone Number */}
-                <div className="relative group">
-                  <label className="block text-xs sm:text-sm font-semibold text-blue-100 mb-2 sm:mb-2.5 tracking-wide">
-                    Phone Number *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="tel"
-                      name="phone_number"
-                      value={formData.phone_number}
-                      onChange={handleChange}
-                      onFocus={() => setFocusedField('phone')}
-                      onBlur={() => setFocusedField('')}
-                      required
-                      className="w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl sm:rounded-2xl focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 transition-all duration-300 text-white placeholder-blue-200/50 text-sm sm:text-base font-medium"
-                      placeholder="Enter your phone number"
-                    />
-                    {focusedField === 'phone' && (
-                      <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-500/10 to-slate-500/10 -z-10 blur-sm"></div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Restaurant Name */}
-                <div className="relative group">
-                  <label className="block text-xs sm:text-sm font-semibold text-blue-100 mb-2 sm:mb-2.5 tracking-wide">
-                    Restaurant Name *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="restaurant_name"
-                      value={formData.restaurant_name}
-                      onChange={handleChange}
-                      onFocus={() => setFocusedField('restaurant')}
-                      onBlur={() => setFocusedField('')}
-                      required
-                      className="w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl sm:rounded-2xl focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 transition-all duration-300 text-white placeholder-blue-200/50 text-sm sm:text-base font-medium"
-                      placeholder="Enter your restaurant name"
-                    />
-                    {focusedField === 'restaurant' && (
-                      <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-500/10 to-slate-500/10 -z-10 blur-sm"></div>
-                    )}
-                  </div>
-                  {formData.restaurant_name && (
-                    <div className="mt-3 sm:mt-4 relative overflow-hidden rounded-xl sm:rounded-2xl">
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-slate-500/10"></div>
-                      <div className="relative bg-white/5 backdrop-blur-sm border border-blue-300/20 rounded-xl sm:rounded-2xl p-3 sm:p-4">
-                        <div className="flex items-center space-x-2 sm:space-x-3">
-                          <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-500 to-slate-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"></path>
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-blue-200 text-xs sm:text-sm font-medium">Your Digital Address</p>
-                            <p className="text-white font-mono text-xs sm:text-sm truncate">
-                              {formData.restaurant_name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-')}.eatnify.com
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Password with strong underline */}
-                <div className="relative group pb-1">
-                  <label className="block text-xs sm:text-sm font-semibold text-blue-100 mb-2 sm:mb-2.5 tracking-wide">
-                    Password *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      onFocus={() => setFocusedField('password')}
-                      onBlur={() => setFocusedField('')}
-                      required
-                      minLength={6}
-                      className="w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl sm:rounded-2xl focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 transition-all duration-300 text-white placeholder-blue-200/50 text-sm sm:text-base font-medium"
-                      placeholder="Create a secure password"
-                    />
-                    {focusedField === 'password' && (
-                      <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-500/10 to-slate-500/10 -z-10 blur-sm"></div>
-                    )}
-                  </div>
-                  <p className="text-blue-200/60 text-xs mt-1.5 sm:mt-2 tracking-wide">
-                    Minimum 6 characters required
-                  </p>
-                  {/* Strong decorative underline */}
-                  <div className="mt-4 sm:mt-5 h-0.5 bg-gradient-to-r from-transparent via-blue-400/50 to-transparent"></div>
-                </div>
-
-                {/* Submit Button - Mobile optimized */}
-                <div className="pt-3 sm:pt-4">
-                  <button
-                    type="submit"
-                    disabled={loading || success}
-                    className="group relative w-full overflow-hidden touch-manipulation min-h-[48px] sm:min-h-[56px]"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-700 to-slate-700 rounded-xl sm:rounded-2xl blur-lg group-hover:blur-xl transition-all duration-300 opacity-70 group-hover:opacity-100"></div>
-                    
-                    <div className="relative bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 active:from-blue-700 active:to-blue-600 text-white font-bold py-3.5 sm:py-4 px-6 sm:px-8 rounded-xl sm:rounded-2xl transition-all duration-300 shadow-2xl">
-                      {loading ? (
-                        <div className="flex items-center justify-center space-x-2 sm:space-x-3">
-                          <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          <span className="text-sm sm:text-base md:text-lg tracking-wide">Creating Account...</span>
-                        </div>
-                      ) : success ? (
-                        <div className="flex items-center justify-center space-x-2 sm:space-x-3">
-                          <svg className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                          </svg>
-                          <span className="text-sm sm:text-base md:text-lg tracking-wide">Success! Redirecting...</span>
-                        </div>
-                      ) : (
-                        <span className="text-sm sm:text-base md:text-lg tracking-wide">Continue to Plan Selection</span>
-                      )}
-                    </div>
-                  </button>
-                </div>
-              </form>
-
-              {/* Footer Links */}
-              <div className="text-center mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-white/10">
-                <p className="text-blue-200/60 text-xs sm:text-sm tracking-wide">
-                  Already part of the future? 
-                  <a href="/login" className="text-blue-300 hover:text-white font-semibold ml-2 transition-colors duration-200 underline decoration-blue-400/50 underline-offset-4 hover:decoration-white">
-                    Sign In
-                  </a>
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Legal Text */}
-          <div className="text-center mt-6 sm:mt-8 px-4">
-            <p className="text-blue-300/50 text-xs tracking-wide leading-relaxed">
-              By joining Eatnify, you agree to our 
-              <span className="text-blue-300 font-medium"> Terms of Service </span> 
-              and 
-              <span className="text-blue-300 font-medium"> Privacy Policy</span>
-            </p>
-          </div>
+        {/* Bottom Legal Text */}
+        <div className="text-center mt-6 px-4">
+          <p className="text-blue-300/50 text-xs">
+            By joining Eatnify, you agree to our{' '}
+            <span className="text-blue-300 font-medium">Terms of Service</span> and{' '}
+            <span className="text-blue-300 font-medium">Privacy Policy</span>
+          </p>
         </div>
       </div>
     </div>
