@@ -12,6 +12,8 @@ export default function DashboardHeader() {
   const [showQR, setShowQR] = useState(false)
   const [qrCodeUrl, setQrCodeUrl] = useState('')
   const [userEmail, setUserEmail] = useState('')
+  const [restaurantName, setRestaurantName] = useState('')
+  const [restaurantSlug, setRestaurantSlug] = useState('')
   const [loading, setLoading] = useState(false)
   const [downloadReady, setDownloadReady] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -26,15 +28,54 @@ export default function DashboardHeader() {
     return localStorage.getItem('userEmail') || 'default@example.com'
   }
 
+  // Fetch restaurant name from users table
+  const fetchRestaurantName = async (email: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('restaurant_name')
+        .eq('email', email)
+        .single()
+
+      if (error) {
+        console.error('Error fetching restaurant name:', error)
+        return null
+      }
+
+      return data?.restaurant_name || null
+    } catch (error) {
+      console.error('Error fetching restaurant name:', error)
+      return null
+    }
+  }
+
+  // Create slug from restaurant name
+  const createSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+  }
+
   // Get base URL for Netlify
   const getBaseUrl = () => {
     return 'https://eatnify.netlify.app'
   }
 
-  // Generate QR code with email
-  const generateQRCode = async (email: string) => {
+  // Generate QR code with restaurant name
+  const generateQRCode = async () => {
     const baseUrl = getBaseUrl()
-    const menuUrl = `${baseUrl}/menu/${(email)}`
+    
+    let menuUrl
+    if (restaurantSlug) {
+      menuUrl = `${baseUrl}/menu/${restaurantSlug}`
+    } else {
+      const email = getUserEmail()
+      const emailSlug = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '-')
+      menuUrl = `${baseUrl}/menu/${emailSlug}`
+    }
     
     const qrCodeDataUrl = await QRCode.toDataURL(menuUrl, {
       width: 512,
@@ -45,15 +86,23 @@ export default function DashboardHeader() {
       }
     })
     
-    return qrCodeDataUrl
+    return { qrCodeDataUrl, menuUrl }
   }
 
   // Prepare canvas for download
-  const prepareCanvasForDownload = async (email: string) => {
+  const prepareCanvasForDownload = async () => {
     if (canvasRef.current) {
       try {
         const baseUrl = getBaseUrl()
-        const menuUrl = `${baseUrl}/menu/${(email)}`
+        let menuUrl
+        if (restaurantSlug) {
+          menuUrl = `${baseUrl}/menu/${restaurantSlug}`
+        } else {
+          const email = getUserEmail()
+          const emailSlug = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '-')
+          menuUrl = `${baseUrl}/menu/${emailSlug}`
+        }
+
         await QRCode.toCanvas(canvasRef.current, menuUrl, {
           width: 512,
           margin: 3,
@@ -80,10 +129,17 @@ export default function DashboardHeader() {
           const email = getUserEmail()
           setUserEmail(email)
 
-          const qrUrl = await generateQRCode(email)
-          setQrCodeUrl(qrUrl)
+          const restaurantNameFromDB = await fetchRestaurantName(email)
+          if (restaurantNameFromDB) {
+            setRestaurantName(restaurantNameFromDB)
+            const slug = createSlug(restaurantNameFromDB)
+            setRestaurantSlug(slug)
+          }
 
-          await prepareCanvasForDownload(email)
+          const { qrCodeDataUrl, menuUrl } = await generateQRCode()
+          setQrCodeUrl(qrCodeDataUrl)
+
+          await prepareCanvasForDownload()
         } catch (error) {
           console.error('Error loading QR code:', error)
         } finally {
@@ -109,8 +165,12 @@ export default function DashboardHeader() {
           
           const pngUrl = downloadCanvas.toDataURL('image/png')
           const downloadLink = document.createElement('a')
+          const fileName = restaurantName 
+            ? `menu-qr-code-${restaurantName.replace(/[^a-zA-Z0-9]/g, '-')}.png`
+            : `menu-qr-code-${userEmail.replace(/[^a-zA-Z0-9]/g, '-')}.png`
+          
           downloadLink.href = pngUrl
-          downloadLink.download = `menu-qr-code-${userEmail.replace(/[^a-zA-Z0-9]/g, '-')}.png`
+          downloadLink.download = fileName
           document.body.appendChild(downloadLink)
           downloadLink.click()
           document.body.removeChild(downloadLink)
@@ -119,8 +179,12 @@ export default function DashboardHeader() {
         console.error('Error downloading QR code:', error)
         if (qrCodeUrl) {
           const downloadLink = document.createElement('a')
+          const fileName = restaurantName 
+            ? `menu-qr-code-${restaurantName.replace(/[^a-zA-Z0-9]/g, '-')}.png`
+            : `menu-qr-code-${userEmail.replace(/[^a-zA-Z0-9]/g, '-')}.png`
+          
           downloadLink.href = qrCodeUrl
-          downloadLink.download = `menu-qr-code-${userEmail.replace(/[^a-zA-Z0-9]/g, '-')}.png`
+          downloadLink.download = fileName
           document.body.appendChild(downloadLink)
           downloadLink.click()
           document.body.removeChild(downloadLink)
@@ -128,8 +192,12 @@ export default function DashboardHeader() {
       }
     } else if (qrCodeUrl) {
       const downloadLink = document.createElement('a')
+      const fileName = restaurantName 
+        ? `menu-qr-code-${restaurantName.replace(/[^a-zA-Z0-9]/g, '-')}.png`
+        : `menu-qr-code-${userEmail.replace(/[^a-zA-Z0-9]/g, '-')}.png`
+      
       downloadLink.href = qrCodeUrl
-      downloadLink.download = `menu-qr-code-${userEmail.replace(/[^a-zA-Z0-9]/g, '-')}.png`
+      downloadLink.download = fileName
       document.body.appendChild(downloadLink)
       downloadLink.click()
       document.body.removeChild(downloadLink)
@@ -140,7 +208,14 @@ export default function DashboardHeader() {
 
   const copyMenuLink = async () => {
     const baseUrl = getBaseUrl()
-    const menuUrl = `${baseUrl}/menu/${userEmail}`
+    let menuUrl
+    if (restaurantSlug) {
+      menuUrl = `${baseUrl}/menu/${restaurantSlug}`
+    } else {
+      const emailSlug = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '-')
+      menuUrl = `${baseUrl}/menu/${emailSlug}`
+    }
+
     try {
       await navigator.clipboard.writeText(menuUrl)
       alert('Menu link copied to clipboard!')
@@ -154,6 +229,17 @@ export default function DashboardHeader() {
       document.body.removeChild(textArea)
       alert('Menu link copied to clipboard!')
     }
+  }
+
+  const getDisplayUrl = () => {
+    const baseUrl = getBaseUrl()
+    if (restaurantSlug) {
+      return `${baseUrl}/menu/${restaurantSlug}`
+    } else if (userEmail) {
+      const emailSlug = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '-')
+      return `${baseUrl}/menu/${emailSlug}`
+    }
+    return `${baseUrl}/menu`
   }
 
   const navItems = [
@@ -300,9 +386,9 @@ export default function DashboardHeader() {
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-slate-500/30 to-transparent"></div>
       </header>
 
-      {/* QR Code Modal - SEPARATE from header */}
+      {/* QR Code Modal - Fixed positioning */}
       {showQR && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-start justify-center pt-20 p-4 bg-black/80 backdrop-blur-sm">
           <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-slate-600 rounded-3xl p-6 max-w-md w-full shadow-2xl mx-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
@@ -312,7 +398,9 @@ export default function DashboardHeader() {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-white">Menu QR Code</h3>
-                  <p className="text-slate-400 text-sm">Scan to view your digital menu</p>
+                  <p className="text-slate-400 text-sm">
+                    {restaurantName ? `For ${restaurantName}` : 'Scan to view your digital menu'}
+                  </p>
                 </div>
               </div>
               <button
@@ -344,7 +432,6 @@ export default function DashboardHeader() {
                     <span className="text-slate-500">QR Code</span>
                   </div>
                 )}
-                {/* Hidden canvas for download */}
                 <canvas 
                   ref={canvasRef} 
                   width="512" 
@@ -355,24 +442,22 @@ export default function DashboardHeader() {
             </div>
 
             {/* Menu Link Section */}
-            {userEmail && (
-              <div className="mb-6">
-                <p className="text-slate-400 text-sm mb-3 font-medium">Menu Link:</p>
-                <div className="flex gap-2">
-                  <div className="flex-1 bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 overflow-hidden">
-                    <p className="text-slate-300 text-sm truncate select-all">
-                      {`https://eatnify.netlify.app/menu/${userEmail}`}
-                    </p>
-                  </div>
-                  <button
-                    onClick={copyMenuLink}
-                    className="px-4 py-3 bg-slate-700 border border-slate-600 text-slate-300 rounded-xl font-semibold transition-all hover:bg-slate-600 hover:text-white min-w-[80px]"
-                  >
-                    Copy
-                  </button>
+            <div className="mb-6">
+              <p className="text-slate-400 text-sm mb-3 font-medium">Menu Link:</p>
+              <div className="flex gap-2">
+                <div className="flex-1 bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 overflow-hidden">
+                  <p className="text-slate-300 text-sm truncate select-all">
+                    {getDisplayUrl()}
+                  </p>
                 </div>
+                <button
+                  onClick={copyMenuLink}
+                  className="px-4 py-3 bg-slate-700 border border-slate-600 text-slate-300 rounded-xl font-semibold transition-all hover:bg-slate-600 hover:text-white min-w-[80px]"
+                >
+                  Copy
+                </button>
               </div>
-            )}
+            </div>
 
             {/* Action Buttons */}
             <div className="flex gap-3">
