@@ -309,33 +309,51 @@ export default function DashboardHeader() {
 
       {/* QR Code Modal */}
       {showQR && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowQR(false)}></div>
-          <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-slate-600 rounded-3xl p-8 max-w-md w-full shadow-2xl">
-            <div className="w-16 h-16 mx-auto mb-6 bg-blue-500/20 rounded-2xl flex items-center justify-center border border-blue-500/30">
-              <span className="text-2xl">📱</span>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in">
+          <div 
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
+            onClick={() => setShowQR(false)}
+          ></div>
+          
+          <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-slate-600 rounded-3xl p-6 max-w-md w-full shadow-2xl z-[101]">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-blue-500/20 rounded-2xl flex items-center justify-center border border-blue-500/30">
+                  <span className="text-2xl">📱</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Menu QR Code</h3>
+                  <p className="text-slate-400 text-sm">Scan to view your digital menu</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowQR(false)}
+                className="p-2 hover:bg-slate-700 rounded-xl transition-colors"
+              >
+                <span className="text-2xl text-slate-400 hover:text-white">✕</span>
+              </button>
             </div>
-            <h3 className="text-2xl font-bold text-white text-center mb-3">Menu QR Code</h3>
-            <p className="text-slate-400 text-center mb-6">
-              Scan this QR code to view your digital menu
-            </p>
-            
+
             {/* QR Code Preview */}
-            <div className="bg-white p-6 rounded-2xl mb-6 flex justify-center">
+            <div className="bg-white p-4 rounded-2xl mb-6 flex justify-center">
               <div className="w-48 h-48 flex items-center justify-center">
                 {loading ? (
-                  <div className="w-full h-full bg-slate-200 animate-pulse rounded flex items-center justify-center">
-                    <span className="text-slate-400">Loading QR...</span>
+                  <div className="w-full h-full bg-slate-200 animate-pulse rounded-xl flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                      <span className="text-slate-500 text-sm">Generating QR...</span>
+                    </div>
                   </div>
                 ) : qrCodeUrl ? (
                   <img 
                     src={qrCodeUrl} 
                     alt="Menu QR Code" 
-                    className="w-full h-full"
+                    className="w-full h-full object-contain"
                   />
                 ) : (
-                  <div className="w-full h-full bg-slate-200 rounded flex items-center justify-center">
-                    <span className="text-slate-400">QR Code</span>
+                  <div className="w-full h-full bg-slate-200 rounded-xl flex items-center justify-center">
+                    <span className="text-slate-500">QR Code</span>
                   </div>
                 )}
                 {/* Hidden canvas for download */}
@@ -348,41 +366,58 @@ export default function DashboardHeader() {
               </div>
             </div>
 
-            {/* Menu Link */}
+            {/* Menu Link Section */}
             {userEmail && (
               <div className="mb-6">
-                <p className="text-slate-400 text-sm mb-2">Menu Link:</p>
+                <p className="text-slate-400 text-sm mb-3 font-medium">Menu Link:</p>
                 <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                         value={`https://eatnify.netlify.app/menu/${userEmail}`}
-                    readOnly
-                    className="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-slate-300 text-sm"
-                  />
+                  <div className="flex-1 bg-slate-800 border border-slate-600 rounded-xl px-4 py-3">
+                    <p className="text-slate-300 text-sm truncate">
+                      {`https://eatnify.netlify.app/menu/${userEmail}`}
+                    </p>
+                  </div>
                   <button
                     onClick={copyMenuLink}
-                    className="px-4 py-2 bg-slate-700 border border-slate-600 text-slate-300 rounded-lg font-semibold transition-all hover:bg-slate-600 text-sm"
+                    className="px-4 py-3 bg-slate-700 border border-slate-600 text-slate-300 rounded-xl font-semibold transition-all hover:bg-slate-600 hover:text-white min-w-[80px]"
                   >
                     Copy
                   </button>
                 </div>
               </div>
             )}
-            
+
+            {/* Action Buttons */}
             <div className="flex gap-3">
               <button 
                 onClick={() => setShowQR(false)}
-                className="flex-1 px-6 py-3 bg-slate-700 border border-slate-600 text-slate-300 rounded-xl font-semibold transition-all hover:bg-slate-600"
+                className="flex-1 px-4 py-3 bg-slate-700 border border-slate-600 text-slate-300 rounded-xl font-semibold transition-all hover:bg-slate-600 hover:text-white text-sm sm:text-base"
               >
                 Close
               </button>
               <button 
                 onClick={downloadQRCode}
                 disabled={loading || !downloadReady}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold transition-all hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base flex items-center justify-center gap-2"
               >
-                {loading ? 'Loading...' : 'Download QR'}
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <span>📥</span>
+                    Download
+                  </>
+                )}
               </button>
+            </div>
+
+            {/* Instructions */}
+            <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+              <p className="text-blue-300 text-xs text-center">
+                💡 Print or display this QR code for customers to scan and view your menu
+              </p>
             </div>
           </div>
         </div>
